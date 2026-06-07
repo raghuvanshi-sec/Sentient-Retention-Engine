@@ -39,7 +39,8 @@ services:
       PORT: ${BACKEND_PORT:-8000}
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
-      ML_SERVICE_URL: http://ml-service:8001
+      PREDICTION_SERVICE_URL: http://ml-service:8001
+      AGENT_SERVICE_URL: http://agentic-ai:8002
       AGENTIC_AI_URL: http://agentic-ai:8002
       NODE_ENV: production
       API_VERSION: v1
