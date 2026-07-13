@@ -4,27 +4,27 @@
 
 **Autonomous SaaS Churn Defense via Guardrailed Multi-Agent Workflows & High-Fidelity Digital Twins.**
 
-The **Sentient-Retention Engine (SRE)** is an enterprise-grade, closed-loop AI platform designed to predict, simulate, and prevent customer churn in SaaS environments. By unifying predictive Machine Learning, autonomous multi-agent graphs built on LangGraph, high-fidelity sandbox simulations (Digital Twins), and a zero-trust Governance Guardrail system, SRE ensures that proactively saving high-risk accounts is done safely, dynamically, and transparently.
+The **Sentient-Retention Engine (SRE)** is an enterprise-grade, closed-loop AI platform designed to predict, simulate, and prevent customer churn in SaaS environments. By unifying predictive Machine Learning, autonomous multi-agent graphs built on LangGraph, high-fidelity sandbox simulations (Digital Twins), and an inline governance model, SRE ensures that proactively saving high-risk accounts is done safely, dynamically, and transparently.
 
 ## Key Features
 
-- **Unified 9-Agent Workflow**: Observe, Think, Simulate, and Decide dynamically via LangGraph cyclic execution paths.
-- **Enterprise Governance Engine**: Zero-trust security, threshold impact bounds, and dynamic agent trust scoring.
+- **Streamlined 4-Agent Workflow**: Observe, Think, Simulate, and Decide dynamically via LangGraph cyclic execution paths comprising Risk Analysis, Strategy Planning, Simulation, and Decision agents.
+- **Resilient AI Graph**: Inline security/governance validation bounds built directly into the Decision agent, with automated fallback logic for low-confidence or high-risk outcomes.
 - **SafeLLM Outage Failover**: Zero-downtime resilient AI architecture falling back from Gemini to Groq in <50ms.
 - **Digital Twin Simulation Sandbox**: High-fidelity environment for stress-testing intervention strategies and calculating ROI.
-- **Cyber-Brutalist Dashboard**: Real-time React 18 UI featuring WebSocket telemetry streams and live agent auditing.
+- **Cyber-Brutalist Dashboard**: Lightweight React 18 UI featuring real-time WebSocket telemetry streams and specialist workspace queues.
 
 ---
 
 ## Tech Stack
 
 - **Language**: TypeScript/JavaScript (Node.js), Python 3.10+
-- **Frontend**: React 18 with Tailwind CSS v4 and Framer Motion
+- **Frontend**: React 18 with Vanilla CSS and Framer Motion
 - **Backend / Orchestration**: Express.js Gateway, FastAPI, Python LangGraph
 - **Database**: PostgreSQL 15+
 - **Caching & Pub/Sub**: Redis 7
 - **Machine Learning**: scikit-learn (Churn Classification)
-- **Monitoring / Infra**: Docker Compose, Prometheus, Grafana, NGINX
+- **Monitoring / Infra**: Docker Compose (Database & Redis services)
 - **Testing**: Jest, PyTest, Unified Python Audit Pipeline
 
 ---
@@ -35,25 +35,25 @@ Ensure your local development environment has the following installed:
 
 - **Node.js** (v20.x or higher)
 - **Python** (v3.10.x or higher, with `pip` and `virtualenv`)
-- **Docker Desktop** (v4.0+ for running the full containerized stack)
+- **Docker Desktop** (v4.0+ for running the containerized database/cache stack)
 - **PostgreSQL 15+** and **Redis** (If running manually outside of Docker)
 
 ---
 
 ## Getting Started
 
-You can launch the platform using either our one-click Docker orchestration or manually via our interactive PowerShell script for deep development.
+You can launch the database and caching layer using Docker Compose, and spin up the microservices manually using our PowerShell script for deep development.
 
-### Method 1: Setup via Docker Compose (Recommended)
+### Method 1: Database & Cache Setup (Docker Compose)
 
-Run the entire fully connected stack (Frontend, Backend, AI Services, Databases, Monitoring) with a single command:
+Run the backend storage layer:
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/raghuvanshi-sec/Sentient-Retention-Engine.git
 cd Sentient-Retention-Engine
 
-# 2. Build and launch all services
+# 2. Launch database and cache
 docker-compose up --build -d
 ```
 
@@ -61,12 +61,11 @@ Once initialized, access the interfaces:
 
 - 🖥️ **React Dashboard**: [http://localhost:3000](http://localhost:3000)
 - ⚙️ **Express Gateway**: [http://localhost:8000](http://localhost:8000)
-- 🧠 **FastAPI AI Server**: [http://localhost:8002](http://localhost:8002)
-- 📊 **Grafana Monitoring**: [http://localhost:3001](http://localhost:3001)
+- 🧠 **FastAPI AI Server**: [http://localhost:8001](http://localhost:8001)
 
 ### Method 2: Manual Setup & `start-dev.ps1` Orchestrator
 
-For active development, our intelligent PowerShell script handles dependency checks, port cleanup, and unified logging.
+For active development, our intelligent PowerShell script handles dependency checks, port cleanup, virtual environments activation, and unified logging.
 
 ```bash
 # 1. Clone and enter the repository
@@ -131,9 +130,8 @@ flowchart LR
     
     Root --> Gov["📂 governance/ (Cross-platform Policies)"]:::dir
     
-    Root --> Infra["📂 infra/ (Docker & NGINX)"]:::dir
+    Root --> Infra["📂 infra/ (Docker PostgreSQL Setup)"]:::dir
     Infra --> InfDb["📂 database/ (PostgreSQL Schemas)"]:::dir
-    Infra --> InfMon["📂 monitoring/ (Prometheus & Grafana)"]:::dir
     
     Root --> Obs["📂 observability/ (Telemetry Tools)"]:::dir
     Root --> Sec["📂 security/ (RBAC Rules)"]:::dir
@@ -154,21 +152,11 @@ flowchart LR
    - **RiskAnalysisAgent** evaluates historical context.
    - **StrategyPlanningAgent** formulates action options.
    - **SimulationAgent** calls the digital twin sandbox to measure ROI.
-   - **DecisionAgent** selects the optimal route.
-   - **GovernanceEngine** cross-checks policies (e.g. max discount limits).
-   - **ActionExecutionAgent** triggers the backend to apply the fix, OR hands off to human operators via WebSocket streams if out of bounds.
+   - **DecisionAgent** selects the optimal route and runs security validation.
+   - **Handoff/Feedback**:
+     - If validation passes ➔ **FeedbackLearningAgent** logs metrics and completes execution.
+     - If validation fails or has low confidence ➔ **HumanHandoff** persists the action to the Specialist queue for human-in-the-loop review.
 5. **Persist & Telemetry:** All states and decisions are logged into PostgreSQL and broadcasted back to the React UI via Redis Pub/Sub.
-
-### Database Schema Highlights
-
-The system relies on PostgreSQL 15+. Core tables include:
-
-- `users`: Core customer demographic and account health scores.
-- `churn_predictions`: Historical time-series record of ML predicted churn risks.
-- `agent_memory`: Long-term tracking of autonomous interventions and resulting outcomes.
-- `governance_audit_logs`: Detailed tracking of agent rule validations and blocks.
-- `agent_trust_levels`: Tracks live mathematical confidence scores (0.0 to 1.0) applied to every agent entity.
-- `approval_requests`: Pending interventions that exceeded autonomous governance bounds and require a human click.
 
 ---
 
@@ -179,7 +167,6 @@ Copy `.env.example` files across the workspace. **Do NOT place sensitive keys in
 ### Backend (`backend/.env`)
 
 | Variable | Description | Example |
-
 | `PORT` | API Gateway Port | `8000` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/sre_db` |
 | `REDIS_URL` | Redis pub-sub endpoint | `redis://localhost:6379` |
@@ -188,7 +175,6 @@ Copy `.env.example` files across the workspace. **Do NOT place sensitive keys in
 ### Agentic AI (`agents/.env`)
 
 | Variable | Description | Example |
-
 | `DATABASE_URL` | Database for agent persistence | `postgresql://postgres:postgres@localhost:5432/sre_db` |
 | `GOOGLE_API_KEY` | Primary SafeLLM Provider Key | `your_google_api_key_here` |
 | `GROQ_API_KEY` | Fallback SafeLLM Provider Key | `your_groq_api_key_here` |
@@ -196,7 +182,6 @@ Copy `.env.example` files across the workspace. **Do NOT place sensitive keys in
 ### Frontend (`frontend/.env`)
 
 | Variable | Description | Example |
-
 | `VITE_API_URL` | Base URL for REST requests | `http://localhost:8000/api/v1` |
 | `VITE_WS_URL` | WebSocket URL for live telemetry | `ws://localhost:8000` |
 
@@ -207,22 +192,19 @@ Copy `.env.example` files across the workspace. **Do NOT place sensitive keys in
 ### Development & Orchestration
 
 | Command | Description |
-
-| `.\start-dev.ps1` | Interactive PowerShell dev center. Spawns, monitors, and cleans all 4 active services safely. |
-| `docker-compose up` | Launches the complete production-like stack. |
+| `.\start-dev.ps1` | Interactive PowerShell dev center. Spawns, monitors, and cleans all active services safely. |
+| `docker-compose up` | Launches containerized PostgreSQL and Redis databases. |
 
 ### Backend (`/backend`)
 
 | Command | Description |
-
 | `npm run dev` | Start Express with nodemon watch mode |
 | `npm run db:setup` | Seeds the database and creates essential tables |
 | `npm run test` | Run API integrations and fallback logic tests |
 
 ### Unified Audit Pipeline (`/`)
 
-| Command | Description |
-
+| Command | Description 
 | `python .agent/scripts/checklist.py .` | Rigorous, multi-gate security, linting, testing, and schema audit. Required before commits. |
 
 ---
@@ -251,34 +233,11 @@ python -m unittest core/test_llm_failover.py
 
 ### Full Workspace Audits
 
-Our custom multi-agent Python auditing framework will test the entire workspace context.
+Our custom auditing framework will test the entire workspace context.
 
 ```bash
 python .agent/scripts/checklist.py .
 ```
-
----
-
-## Deployment
-
-### Containerization (Docker)
-
-The primary deployment path uses the provided `docker-compose.yml` which wires the internal Docker network (`sentient-network`), ensuring agents, web, and DB securely interconnect.
-
-```bash
-docker-compose up --build -d
-```
-
-All ports bind mapped correctly. Ensure you override placeholder `.env` files dynamically in your CI/CD tool.
-
-### Manual / VPS Deployment
-
-1. Set up a Linux VM (e.g. Ubuntu 22.04 LTS).
-2. Install `Nginx`, `PostgreSQL 15`, `Redis`, `Node.js 20`, and `Python 3.10`.
-3. Configure PostgreSQL databases.
-4. Clone and run `npm install` and `pip install -r requirements.txt`.
-5. Run the services via `systemd` or `pm2`.
-6. Configure `infra/nginx/nginx.conf` and secure it with certbot.
 
 ---
 
@@ -313,7 +272,7 @@ Alternatively, execute the contents of `infra/database/schema.sql` directly into
 
 ## Contributing
 
-We welcome contributions! Please follow our established AI Governance Guardrail rules. Any agent logic modification must not bypass the `GovernanceEngine`.
+We welcome contributions! Any agent logic modification must run through our inline validator tests.
 Before submitting pull requests, run `python .agent/scripts/checklist.py .` to ensure 100% security and schema compliance.
 
 ## 📄 Licensing

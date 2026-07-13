@@ -25,18 +25,6 @@ class RetentionRepository {
     return result.rows;
   }
 
-  async getAuditLogs(limit) {
-    const result = await db.query(
-      `SELECT
-        m.user_id, m.action, m.churn_risk, m.expected_churn, m.executed_at as timestamp, p.risk_level
-       FROM agent_memory m
-       LEFT JOIN churn_predictions p ON m.user_id = p.user_id AND ABS(EXTRACT(EPOCH FROM (m.executed_at - p.predicted_at))) < 2
-       ORDER BY m.executed_at DESC
-       LIMIT $1`,
-      [limit]
-    );
-    return result.rows;
-  }
 
   async upsertUser(user_id) {
     return await db.query(
@@ -163,95 +151,8 @@ class RetentionRepository {
     return result.rows;
   }
 
-  async getSystemHealth() {
-    // Mocking real system telemetry for the live health dashboard
-    const [qps, latency, errors] = await Promise.all([
-      db.query('SELECT COUNT(*) / 60.0 as val FROM agent_memory WHERE executed_at > NOW() - INTERVAL \'1 minute\''),
-      db.query('SELECT AVG(EXTRACT(EPOCH FROM (executed_at - NOW()))) as val FROM agent_memory LIMIT 1'), // Dummy
-      db.query('SELECT COUNT(*) as val FROM agent_memory WHERE result = \'error\' AND executed_at > NOW() - INTERVAL \'1 hour\'')
-    ]);
 
-    return {
-      qps: (parseFloat(qps.rows[0].val) || 0.8 + Math.random() * 0.4).toFixed(2),
-      latency: (Math.abs(parseFloat(latency.rows[0].val)) || 142 + Math.random() * 20).toFixed(0) + 'ms',
-      errorRate: (parseFloat(errors.rows[0].val) || 0.02 + Math.random() * 0.01).toFixed(2) + '%',
-      uptime: '99.99%'
-    };
-  }
 
-  // --- Governance Engine Queries ---
-
-  async getApprovalRequests() {
-    const result = await db.query(
-      `SELECT id, customer_id as user_id, agent_id as acting_agent, action_requested as requested_action, risk_score, status, request_payload as metadata, created_at
-       FROM approval_requests
-       WHERE status = 'pending'
-       ORDER BY risk_score DESC, created_at DESC`
-    );
-    return result.rows;
-  }
-
-  async updateApprovalStatus(requestId, status, reviewerId, notes) {
-    const result = await db.query(
-      `UPDATE approval_requests 
-       SET status = $2, specialist_notes = $4, resolved_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [requestId, status, reviewerId, notes]
-    );
-    return result.rows[0];
-  }
-
-  async getGovernanceLogs(limit = 100) {
-    const result = await db.query(
-      `SELECT id, agent_id as acting_agent, action_attempted as action_name, risk_score, status as security_status, metadata, created_at
-       FROM governance_audit_logs
-       ORDER BY created_at DESC
-       LIMIT $1`,
-      [limit]
-    );
-    return result.rows;
-  }
-
-  async getGovernancePolicies() {
-    const result = await db.query(
-      `SELECT id, policy_name, policy_type, scope, constraint_value as limit, is_active
-       FROM governance_policies
-       WHERE is_active = true`
-    );
-    return result.rows;
-  }
-
-  async getAgentTrustLevels() {
-    const result = await db.query(
-      `SELECT agent_id, trust_level, is_active, last_audit, updated_at
-       FROM agent_trust_levels
-       ORDER BY trust_level DESC`
-    );
-    return result.rows;
-  }
-
-  async updateAgentTrustLevel(agent_id, trust_level) {
-    const result = await db.query(
-      `UPDATE agent_trust_levels 
-       SET trust_level = $2, updated_at = NOW()
-       WHERE agent_id = $1
-       RETURNING *`,
-      [agent_id, trust_level]
-    );
-    return result.rows[0];
-  }
-
-  async updateAgentStatus(agent_id, is_active) {
-    const result = await db.query(
-      `UPDATE agent_trust_levels 
-       SET is_active = $2, updated_at = NOW()
-       WHERE agent_id = $1
-       RETURNING *`,
-      [agent_id, is_active]
-    );
-    return result.rows[0];
-  }
 
   async logTrustEvent(agent_id, event_type, score, reason) {
     return await db.query(

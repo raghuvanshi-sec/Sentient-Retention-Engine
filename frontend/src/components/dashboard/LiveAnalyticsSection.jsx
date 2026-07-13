@@ -3,8 +3,6 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
-import { AuditLogTable } from './DashboardComponents';
-import RevenueProtectionTimeline from './RevenueProtectionTimeline';
 
 const LiveAnalyticsSection = ({ data, auditLogs = [], searchTerm = '', onSearch = () => {} }) => {
   const { churnTrend, segmentDistribution, retentionImpact } = data;
@@ -162,15 +160,7 @@ const LiveAnalyticsSection = ({ data, auditLogs = [], searchTerm = '', onSearch 
         </div>
       </div>
 
-      {/* Revenue Protection Timeline Integration */}
-      <div className="mb-6">
-        <RevenueProtectionTimeline />
-      </div>
 
-      {/* Audit Log Table Integration */}
-      <div className="pb-12">
-        <AuditLogTable logs={auditLogs} searchTerm={searchTerm} onSearch={onSearch} />
-      </div>
     </div>
   );
 };

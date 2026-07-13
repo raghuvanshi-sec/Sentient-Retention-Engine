@@ -21,9 +21,11 @@ const AGENT_PERMISSIONS = {
     thresholds: {}
   },
   'DecisionAgent': {
-    allowed: ['RANK_STRATEGIES', 'SELECT_OPTIMAL_PATH'],
-    blocked: ['EXECUTE_DISCOUNT'],
-    thresholds: {}
+    allowed: ['RANK_STRATEGIES', 'SELECT_OPTIMAL_PATH', 'VALIDATE_WORKFLOWS', 'BLOCK_UNSAFE_ACTIONS', 'EXECUTE_APPROVED_RETENTION_WORKFLOWS'],
+    blocked: ['BYPASS_GOVERNANCE_VALIDATION'],
+    thresholds: {
+      'execute_approved_retention_workflows': { max_value: 500, requires_approval_for: ['ENTERPRISE'] }
+    }
   },
   'ActionAgent': {
     allowed: ['EXECUTE_APPROVED_RETENTION_WORKFLOWS', 'SEND_OFFERS'],
@@ -331,17 +333,6 @@ class RetentionService {
     return response;
   }
 
-  async getAuditLogs(limit = 50) {
-    const cacheKey = `audit-logs:${limit}`;
-    const cached = await this.cache.get(cacheKey);
-    if (cached) return cached;
-
-    const rows = await this.repository.getAuditLogs(limit);
-    const response = { logs: rows, count: rows.length };
-
-    await this.cache.set(cacheKey, response, 30);
-    return response;
-  }
 
   async claimEscalation(claimData) {
     const { escalation_id, user_id, specialist_id, specialist_name, churn_risk } = claimData;
@@ -472,75 +463,8 @@ class RetentionService {
     return { status: 'success', message: 'Note added' };
   }
 
-  async getSystemHealth() {
-    return await this.repository.getSystemHealth();
-  }
 
-  // --- Governance Engine Services ---
 
-  async getApprovalRequests() {
-    const requests = await this.repository.getApprovalRequests();
-    return { requests, count: requests.length };
-  }
-
-  async updateApprovalStatus(requestId, status, reviewerId, notes) {
-    const result = await this.repository.updateApprovalStatus(requestId, status, reviewerId, notes);
-    
-    // Log governance action
-    await this.repository.createAdminAuditLog({
-      action: `GOVERNANCE_${status}`,
-      reason: `Request ${requestId} ${status} by ${reviewerId}. Notes: ${notes}`,
-      admin_id: reviewerId
-    });
-
-    await this.cache.invalidatePattern('audit-logs:*');
-    return result;
-  }
-
-  async getGovernanceLogs(limit) {
-    const logs = await this.repository.getGovernanceLogs(limit);
-    return { logs, count: logs.length };
-  }
-
-  async getGovernancePolicies() {
-    const policies = await this.repository.getGovernancePolicies();
-    return { policies, count: policies.length };
-  }
-
-  async getAgentTrustLevels() {
-    const trustLevels = await this.repository.getAgentTrustLevels();
-    return { trustLevels, count: trustLevels.length };
-  }
-
-  async updateAgentTrustLevel(agentId, trustLevel) {
-    const result = await this.repository.updateAgentTrustLevel(agentId, trustLevel);
-    
-    // Log trust level change
-    await this.repository.createAdminAuditLog({
-      action: 'GOVERNANCE_TRUST_UPDATE',
-      reason: `Trust level for ${agentId} updated to ${trustLevel}`,
-      admin_id: 'SYSTEM_ADMIN' // Could be passed from request
-    });
-
-    return result;
-  }
-
-  async updateAgentStatus(agentId, isActive) {
-    const result = await this.repository.updateAgentStatus(agentId, isActive);
-    
-    // Log status change
-    await this.repository.createAdminAuditLog({
-      action: isActive ? 'GOVERNANCE_AGENT_RESTORED' : 'GOVERNANCE_AGENT_SUSPENDED',
-      reason: `Agent ${agentId} status updated to ${isActive ? 'Active' : 'Suspended'}`,
-      admin_id: 'SYSTEM_ADMIN'
-    });
-
-    return result;
-  }
-
-  async getAgentScopes() {
-    return AGENT_PERMISSIONS;
-  }
 }
 
 module.exports = RetentionService;

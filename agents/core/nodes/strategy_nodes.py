@@ -10,7 +10,8 @@ from ..governance_policy import HARDCODED_POLICIES
 
 llm, LLM_AVAILABLE = get_llm()
 
-from ..governance_engine import governance_protected
+from ..governance_engine import governance_protected, SecurityValidator, CompositeRiskModel
+from ..database import create_retention_action, create_agent_memory
 
 @governance_protected("generate_strategies")
 def node_strategy_planning(state: RetentionState) -> Dict[str, Any]:
@@ -155,11 +156,12 @@ Example valid JSON output:
         "agent_telemetry": state.get("agent_telemetry", [])
     }
 
-@governance_protected("select_optimal_path")
 def node_decision(state: RetentionState) -> Dict[str, Any]:
     """
     [Agent 4: DecisionAgent]
-    Purpose: Ranks and selects the optimal strategy based on simulation outcomes.
+    Purpose: Ranks and selects the optimal strategy based on simulation outcomes,
+    validates the strategy against business governance policies, and executes
+    simulated action or escalates to human specialist.
     """
     emit_telemetry(state, "DecisionAgent", "DECISION_STARTED", "Selecting optimal strategy based on simulations.")
     
@@ -167,12 +169,18 @@ def node_decision(state: RetentionState) -> Dict[str, Any]:
     candidates = state.get("strategy_candidates", [])
     
     if not sim_results:
-        # If no simulation happened, pick the one with highest ROI estimate
-        selected = max(candidates, key=lambda x: x.get("roi_estimate", 0))
+        if candidates:
+            selected = max(candidates, key=lambda x: x.get("roi_estimate", 0))
+        else:
+            selected = {
+                "strategy_id": "ST-DEFAULT",
+                "name": "Loyalty Appreciation",
+                "details": "Standard 10% discount for continued service.",
+                "roi_estimate": 1.15
+            }
         reasoning = "Selected based on initial ROI estimate (No simulation data available)."
-        confidence = 0.65 # Lower confidence without simulation
+        confidence = 0.65
     else:
-        # User's Decision Logic: score = (roi * 0.4) + (confidence * 0.6)
         def calculate_score(s):
             roi = s.get("roi_estimate", 0)
             conf = s.get("success_probability", 0)
@@ -187,9 +195,120 @@ def node_decision(state: RetentionState) -> Dict[str, Any]:
                    f"Strategy Selected: {selected.get('name')}", 
                    {"confidence": confidence, "reasoning": reasoning})
     
-    return {
-        "selected_strategy": selected,
-        "decision_confidence": confidence,
-        "decision_reasoning": reasoning,
-        "agent_telemetry": state.get("agent_telemetry", [])
+    # --- Governance & Action Execution Layer ---
+    action_name = selected.get("name", "UNKNOWN_ACTION")
+    risk_level = state.get("risk_level", "MEDIUM")
+    customer_id = state.get("customer_id")
+    
+    emit_telemetry(state, "GovernanceEngine", "VALIDATION_STARTED", 
+                   f"Initiating validation layer for {action_name} | Risk: {risk_level}")
+    
+    risk_score = CompositeRiskModel.calculate_score(state, action_name, confidence, "DecisionAgent")
+    state["action_risk_score"] = risk_score
+    
+    validation = SecurityValidator.validate_action("DecisionAgent", action_name, state)
+    
+    violations = []
+    if validation["status"] == "DENIED":
+        violations.append(f"SECURITY_DENIAL: {validation['reason']}")
+    elif validation["status"] == "PAUSED":
+        violations.append(f"APPROVAL_REQUIRED: {validation['reason']}")
+        
+    target_confidence = 0.90 if risk_level == "CRITICAL" else 0.80
+    if confidence < target_confidence:
+        violations.append(f"CONFIDENCE_UNDER_THRESHOLD: {confidence:.2f} < {target_confidence}")
+        
+    passed = len(violations) == 0 and validation["status"] == "ALLOWED"
+    
+    approval_status = "NONE"
+    if validation["status"] == "PAUSED":
+        approval_status = "PENDING"
+        emit_telemetry(state, "GovernanceEngine", "APPROVAL_CHAIN_TRIGGERED", 
+                       f"Action {action_name} requires specialist review. Risk Score: {risk_score}")
+                       
+    validation_status = "VALIDATION_PASSED" if passed else "VALIDATION_FAILED"
+    message = "Governance Clearance Granted" if passed else f"Governance Constraint: {violations[0] if violations else 'Validation Failed'}"
+    
+    governance_metadata = {
+        "confidence": f"{confidence*100:.1f}%",
+        "risk_score": risk_score,
+        "security_status": validation["status"],
+        "approval_status": approval_status,
+        "violations": violations
     }
+    
+    emit_telemetry(state, "GovernanceEngine", validation_status, message, governance_metadata)
+    
+    state["validation_passed"] = passed
+    state["policy_violations"] = violations
+    state["governance_report"] = {
+        "status": "APPROVED" if passed else "REJECTED_OR_PAUSED",
+        "violations": violations,
+        "timestamp": time.time(),
+        "risk_score": risk_score,
+        "metadata": governance_metadata
+    }
+    
+    if passed:
+        # Simulated Execution
+        emit_telemetry(state, "ActionExecutionAgent", "EXECUTION_STARTED", 
+                       f"Executing {action_name} for {customer_id} | Risk Score: {risk_score:.2f}")
+        emit_telemetry(state, "ActionExecutionAgent", "ACTION_TRIGGERED", f"{action_name} triggered successfully.")
+        
+        if "Discount" in action_name:
+            emit_telemetry(state, "ActionExecutionAgent", "COUPON_GENERATED", "Dynamic 15% discount code created.")
+            
+        execution_payload = {
+            "customer_id": customer_id,
+            "strategy_id": selected.get("strategy_id"),
+            "action": action_name,
+            "risk_score": risk_score,
+            "approval_status": approval_status,
+            "is_automated": True,
+            "execution_timestamp": time.time()
+        }
+        
+        emit_telemetry(state, "ActionExecutionAgent", "EXECUTION_COMPLETED", 
+                       "Final action successfully executed and recorded in the audit ledger.")
+                       
+        create_agent_memory(
+            customer_id=customer_id,
+            action=action_name,
+            result="executed",
+            churn_risk=state.get("risk_score", 0.5),
+            reason=reasoning
+        )
+        
+        return {
+            "selected_strategy": selected,
+            "decision_confidence": confidence,
+            "decision_reasoning": reasoning,
+            "validation_passed": True,
+            "policy_violations": [],
+            "approval_chain_status": approval_status,
+            "action_risk_score": risk_score,
+            "final_action": action_name,
+            "execution_payload": execution_payload,
+            "execution_status": "SUCCESS",
+            "escalated_to_human": False,
+            "agent_telemetry": state.get("agent_telemetry", [])
+        }
+    else:
+        # Validation failed or needs approval -> Escalation trigger
+        state["approval_chain_status"] = approval_status
+        state["escalated_to_human"] = True
+        state["escalation_reason"] = violations[0] if violations else "Governance policy constraint or low confidence."
+        
+        return {
+            "selected_strategy": selected,
+            "decision_confidence": confidence,
+            "decision_reasoning": reasoning,
+            "validation_passed": False,
+            "policy_violations": violations,
+            "approval_chain_status": approval_status,
+            "action_risk_score": risk_score,
+            "final_action": "HUMAN_REVIEW_REQUIRED",
+            "escalated_to_human": True,
+            "escalation_reason": state["escalation_reason"],
+            "agent_telemetry": state.get("agent_telemetry", [])
+        }

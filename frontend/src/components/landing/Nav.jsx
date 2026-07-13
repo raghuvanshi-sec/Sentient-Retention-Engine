@@ -2,6 +2,13 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Shield, Lock, LogOut } from "lucide-react";
 
+const NavItem = ({ href, to, children, ...props }) => {
+  if (href) {
+    return <a href={href} {...props}>{children}</a>;
+  }
+  return <Link to={to} {...props}>{children}</Link>;
+};
+
 export const Nav = () => {
   const location = useLocation();
   const isHome = location.pathname === "/";
@@ -24,14 +31,14 @@ export const Nav = () => {
       </Link>
       <div className="hidden md:flex items-center gap-10 font-mono text-xs uppercase tracking-[0.2em]">
         {isHome ? (
-          <a href="#pipeline" className="hover:text-iris transition-colors" data-cursor>Pipeline</a>
+          <NavItem href="#pipeline" className="hover:text-iris transition-colors" data-cursor>Pipeline</NavItem>
         ) : (
-          <Link to="/#pipeline" className="hover:text-iris transition-colors" data-cursor>Pipeline</Link>
+          <NavItem to="/#pipeline" className="hover:text-iris transition-colors" data-cursor>Pipeline</NavItem>
         )}
         {isHome ? (
-          <a href="#capabilities" className="hover:text-iris transition-colors" data-cursor>Capabilities</a>
+          <NavItem href="#capabilities" className="hover:text-iris transition-colors" data-cursor>Capabilities</NavItem>
         ) : (
-          <Link to="/#capabilities" className="hover:text-iris transition-colors" data-cursor>Capabilities</Link>
+          <NavItem to="/#capabilities" className="hover:text-iris transition-colors" data-cursor>Capabilities</NavItem>
         )}
         <Link 
           to="/pricing" 

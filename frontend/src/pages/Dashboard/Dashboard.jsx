@@ -12,10 +12,9 @@ import SpecialistDashboard from './SpecialistDashboard';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import LiveAnalyticsSection from '../../components/dashboard/LiveAnalyticsSection';
 import { AIReasoningPanel } from '../../components/dashboard/AIReasoningPanel';
-import IntegrationsCenter from '../../components/dashboard/IntegrationsCenter';
 import {
   KPICard, DonutChart, BarChart, Heatmap, ModelCard, FeatureImportance,
-  EscalationCard, EscalationDetailsModal, ChainOfThoughtTerminal, AuditLogTable,
+  EscalationCard, EscalationDetailsModal, ChainOfThoughtTerminal,
   ActivityKPICard, LiveEventCard, WorkflowChainOverlay, BrandLogo
 } from '../../components/dashboard/DashboardComponents';
 
@@ -67,7 +66,6 @@ const Dashboard = ({ isAdminView = false }) => {
   const [selectedChainId, setSelectedChainId] = useState(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [aiReasoningEntity, setAiReasoningEntity] = useState(null);
-  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
 
   const containerRef = useRef();
   const graphRef = useRef();
@@ -278,7 +276,6 @@ const Dashboard = ({ isAdminView = false }) => {
     { name: 'Neural Topology', icon: Share2, id: 'Pipeline' },
     { name: 'Observability', icon: Activity, id: 'Analytics' },
     { name: 'Action Center', icon: AlertOctagon, id: 'Escalations' },
-    { name: 'Integrations', icon: Building2, id: 'Integrations' },
   ];
 
   return (
@@ -314,69 +311,7 @@ const Dashboard = ({ isAdminView = false }) => {
             <BrandLogo isSidebar={true} />
           </Link>
           
-          {/* Workspace Switcher */}
-          <div className="relative mb-8 w-full px-4">
-            <button 
-              onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
-              className="w-full flex flex-col items-center gap-1 group relative transition-all"
-            >
-              <div 
-                className="w-12 h-12 flex items-center justify-center font-display font-black text-lg border-2 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)]"
-                style={{ 
-                  borderColor: activeWorkspace?.color || '#c5f82a',
-                  color: activeWorkspace?.color || '#c5f82a',
-                  backgroundColor: `${activeWorkspace?.color || '#c5f82a'}15`
-                }}
-              >
-                {activeWorkspace?.logo || 'WS'}
-              </div>
-              <span className="text-[9px] uppercase font-bold text-zinc-400 group-hover:text-white truncate w-full text-center mt-1 transition-colors">
-                {activeWorkspace?.name || 'Workspace'}
-              </span>
-            </button>
 
-            {isWorkspaceMenuOpen && (
-              <div className="absolute top-0 left-20 w-64 bg-[#0a0a0a] border border-zinc-800 shadow-2xl z-50 p-2 animate-in slide-in-from-left-2 fade-in">
-                <div className="px-3 py-2 border-b border-zinc-800/50 mb-2">
-                  <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Select Organization</span>
-                </div>
-                {workspaces.map((ws) => (
-                  <button
-                    key={ws.id}
-                    onClick={() => {
-                      setActiveWorkspace(ws);
-                      setIsWorkspaceMenuOpen(false);
-                      triggerAction(`Switched to tenant: ${ws.name}`);
-                    }}
-                    className={`w-full text-left px-3 py-3 flex items-center gap-3 transition-colors hover:bg-zinc-900 group ${activeWorkspace?.id === ws.id ? 'bg-zinc-900/50' : ''}`}
-                  >
-                    <div 
-                      className="w-8 h-8 flex shrink-0 items-center justify-center font-display font-bold text-xs border"
-                      style={{ 
-                        borderColor: ws.color, 
-                        color: ws.color,
-                        backgroundColor: activeWorkspace?.id === ws.id ? `${ws.color}20` : 'transparent'
-                      }}
-                    >
-                      {ws.logo}
-                    </div>
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="text-sm font-semibold text-zinc-200 truncate group-hover:text-white">{ws.name}</span>
-                      <span className="text-[10px] text-zinc-500 truncate">{ws.id}.sentient.ai</span>
-                    </div>
-                    {activeWorkspace?.id === ws.id && (
-                      <div className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: ws.color }} />
-                    )}
-                  </button>
-                ))}
-                <div className="mt-2 pt-2 border-t border-zinc-800/50">
-                  <button className="w-full text-left px-3 py-2 flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors">
-                    <Settings size={14} /> Manage Workspaces
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
 
           <div className="flex flex-col gap-8 items-center">
             {navItems.map((item) => {
@@ -629,7 +564,7 @@ const Dashboard = ({ isAdminView = false }) => {
                         {activeWorkspace?.name}
                       </span>
                     </div>
-                    <h1 className="text-2xl font-black text-white uppercase tracking-tighter font-display">System Observability</h1>
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter font-display">System Observability</h2>
                     <p className="text-xs text-gray-500 tracking-wider uppercase font-bold mt-1">Agent orchestration and neural pipeline telemetry</p>
                   </div>
                   <div className="flex items-center gap-5">
@@ -967,9 +902,6 @@ const Dashboard = ({ isAdminView = false }) => {
             </div>
           )}
 
-          {activeTab === 'Integrations' && (
-            <IntegrationsCenter activeWorkspace={activeWorkspace} />
-          )}
         </div>
 
         {notification && (

@@ -17,10 +17,10 @@ function Stop-PortListener ($Port, $Name) {
         $Connections = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
         if ($Connections) {
             foreach ($Conn in $Connections) {
-                $Pid = if ($Conn) { $Conn.OwningProcess } else { $null }
-                if ($Pid) {
-                    Write-Host "[!] Port $Port in use by legacy $Name. Reclaiming port (PID: $Pid)..." -ForegroundColor Yellow
-                    Stop-Process -Id $Pid -Force -ErrorAction SilentlyContinue
+                $TargetProcessId = if ($Conn) { $Conn.OwningProcess } else { $null }
+                if ($TargetProcessId) {
+                    Write-Host "[!] Port $Port in use by legacy $Name. Reclaiming port (PID: $TargetProcessId)..." -ForegroundColor Yellow
+                    Stop-Process -Id $TargetProcessId -Force -ErrorAction SilentlyContinue
                     Start-Sleep -Milliseconds 500
                 }
             }
@@ -124,6 +124,15 @@ try {
 
         Write-Host "  -> Spawning $sName on Port $sPort..." -ForegroundColor $sColor
         
+        # Dynamically resolve python executable from local venv if present
+        $ResolvedCmd = $sCmd
+        if ($sCmd -like "python *") {
+            $VenvPython = Join-Path $sPath "venv\Scripts\python.exe"
+            if (Test-Path $VenvPython) {
+                $ResolvedCmd = $sCmd.Replace("python", "& '$VenvPython'")
+            }
+        }
+
         # Styled powershell command block with defensive window-title wrapping
         $ScriptBlock = "
         try { Clear-Host } catch {}
@@ -137,7 +146,7 @@ try {
         Write-Host '   [URL] Local Endpoint: http://localhost:$sPort' -ForegroundColor $sColor
         Write-Host '==========================================================' -ForegroundColor $sColor
         cd '$sPath'
-        $sCmd
+        $ResolvedCmd
         "
         
         $Proc = Start-Process powershell -ArgumentList "-NoExit", "-Command", $ScriptBlock -PassThru
@@ -251,9 +260,9 @@ finally {
     if ($SpawnedProcesses) {
         foreach ($Proc in $SpawnedProcesses) {
             if ($Proc -and (-not $Proc.HasExited)) {
-                $pId = $Proc.Id
-                Write-Host "   Stopping spawned terminal window (PID: $pId)..." -ForegroundColor Yellow
-                Stop-Process -Id $pId -Force -ErrorAction SilentlyContinue
+                $SpawnedPid = $Proc.Id
+                Write-Host "   Stopping spawned terminal window (PID: $SpawnedPid)..." -ForegroundColor Yellow
+                Stop-Process -Id $SpawnedPid -Force -ErrorAction SilentlyContinue
             }
         }
     }

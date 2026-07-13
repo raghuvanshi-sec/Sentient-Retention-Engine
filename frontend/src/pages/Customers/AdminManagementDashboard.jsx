@@ -13,8 +13,6 @@ import { BrandLogo } from '../../components/dashboard/DashboardComponents';
 import config from '../../config';
 import apiClient from '../../services/apiClient';
 import { useNavigate, useLocation } from 'react-router-dom';
-import GovernanceView from './GovernanceView';
-import CustomerSuccessView from './CustomerSuccessView';
 
 const AdminManagementDashboard = () => {
   const navigate = useNavigate();
@@ -41,126 +39,7 @@ const AdminManagementDashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Governance State
-  const [approvalRequests, setApprovalRequests] = useState([]);
-  const [governanceLogs, setGovernanceLogs] = useState([]);
-  const [agentScopes, setAgentScopes] = useState({});
-  const [isGovLoading, setIsGovLoading] = useState(false);
-  const [govView, setGovView] = useState('approvals'); // 'approvals', 'logs', 'policies'
-  const [governancePolicies, setGovernancePolicies] = useState([]);
-  const [agentTrustLevels, setAgentTrustLevels] = useState([]);
 
-  // Customer Success Command Center State
-  const [csCustomers, setCsCustomers] = useState([
-    {
-      id: "cs-101",
-      name: "Acme Corp",
-      domain: "acme.com",
-      healthScore: 42,
-      revenueExposure: 120000,
-      churnProbability: 0.78,
-      priority: "Critical",
-      recommendedAction: "Upgrade SLAs & schedule executive briefing",
-      interventionStatus: "Pending Action",
-      contactPerson: "Jane Doe (VP of Infrastructure)",
-      lastActive: "2 hours ago"
-    },
-    {
-      id: "cs-102",
-      name: "Cyberdyne Systems",
-      domain: "cyberdyne.io",
-      healthScore: 35,
-      revenueExposure: 250000,
-      churnProbability: 0.89,
-      priority: "Critical",
-      recommendedAction: "Deploy customer retention specialist immediately",
-      interventionStatus: "Escalated",
-      contactPerson: "Miles Dyson (Director of AI)",
-      lastActive: "1 day ago"
-    },
-    {
-      id: "cs-103",
-      name: "Initech LLC",
-      domain: "initech.com",
-      healthScore: 58,
-      revenueExposure: 45000,
-      churnProbability: 0.62,
-      priority: "High",
-      recommendedAction: "Launch email campaign for onboarding re-engagement",
-      interventionStatus: "Pending Action",
-      contactPerson: "Peter Gibbons (Engineering Lead)",
-      lastActive: "3 days ago"
-    },
-    {
-      id: "cs-104",
-      name: "Stark Industries",
-      domain: "starkindustries.com",
-      healthScore: 71,
-      revenueExposure: 500000,
-      churnProbability: 0.45,
-      priority: "Medium",
-      recommendedAction: "Offer custom integration package",
-      interventionStatus: "Success Plan Created",
-      contactPerson: "Pepper Potts (CEO)",
-      lastActive: "4 hours ago"
-    },
-    {
-      id: "cs-105",
-      name: "Hooli Inc",
-      domain: "hooli.xyz",
-      healthScore: 22,
-      revenueExposure: 380000,
-      churnProbability: 0.94,
-      priority: "Critical",
-      recommendedAction: "Schedule urgent executive outreach call",
-      interventionStatus: "Outreach Scheduled",
-      contactPerson: "Gavin Belson (Founder)",
-      lastActive: "30 minutes ago"
-    },
-    {
-      id: "cs-106",
-      name: "Tyrell Corporation",
-      domain: "tyrell.io",
-      healthScore: 64,
-      revenueExposure: 180000,
-      churnProbability: 0.51,
-      priority: "Medium",
-      recommendedAction: "Send technical review report",
-      interventionStatus: "Pending Action",
-      contactPerson: "Eldon Tyrell (Chief Architect)",
-      lastActive: "12 hours ago"
-    },
-    {
-      id: "cs-107",
-      name: "Wayne Enterprises",
-      domain: "waynecorp.com",
-      healthScore: 82,
-      revenueExposure: 750000,
-      churnProbability: 0.28,
-      priority: "Low",
-      recommendedAction: "Routine quarterly success check-in",
-      interventionStatus: "Pending Action",
-      contactPerson: "Lucius Fox (COO)",
-      lastActive: "2 days ago"
-    },
-    {
-      id: "cs-108",
-      name: "Umbrella Corp",
-      domain: "umbrellacorp.net",
-      healthScore: 15,
-      revenueExposure: 320000,
-      churnProbability: 0.97,
-      priority: "Critical",
-      recommendedAction: "Trigger high-risk response protocol",
-      interventionStatus: "Pending Action",
-      contactPerson: "Albert Wesker (Head of Bio-Security)",
-      lastActive: "5 days ago"
-    }
-  ]);
-  const [selectedCsIds, setSelectedCsIds] = useState([]);
-  const [csSearchQuery, setCsSearchQuery] = useState('');
-  const [csPriorityFilter, setCsPriorityFilter] = useState('All');
-  const [csStatusFilter, setCsStatusFilter] = useState('All');
 
   const user = JSON.parse(localStorage.getItem('sre_user') || '{}');
 
@@ -192,105 +71,14 @@ const AdminManagementDashboard = () => {
     }
   };
 
-  const [auditLogs, setAuditLogs] = useState([]);
-  const fetchAuditLogs = async () => {
-    try {
-      const res = await apiClient.get('/audit-logs?limit=50');
-      setAuditLogs(res.data.logs || []);
-    } catch (err) {
-      console.error('Failed to fetch audit logs:', err);
-    }
-  };
-
-  const [healthData, setHealthData] = useState(null);
-  const fetchHealthData = async () => {
-    try {
-      const res = await apiClient.get('/admin/health');
-      setHealthData(res.data.health);
-    } catch (err) {
-      console.error('Failed to fetch health data:', err);
-    }
-  };
-
-  const fetchGovernanceData = async () => {
-    setIsGovLoading(true);
-    try {
-      const [approvalsRes, logsRes, policiesRes, trustRes, scopesRes] = await Promise.all([
-        apiClient.get('/governance/approvals'),
-        apiClient.get('/governance/logs'),
-        apiClient.get('/governance/policies'),
-        apiClient.get('/governance/trust-levels'),
-        apiClient.get('/governance/agent-scopes')
-      ]);
-      setApprovalRequests(approvalsRes.data.approvals || []);
-      setGovernanceLogs(logsRes.data.logs || []);
-      setGovernancePolicies(policiesRes.data.policies || []);
-      setAgentTrustLevels(trustRes.data.trustLevels || []);
-      setAgentScopes(scopesRes.data || {});
-    } catch (err) {
-      console.error('Failed to fetch governance data:', err);
-    } finally {
-      setIsGovLoading(false);
-    }
-  };
-
-  const handleUpdateTrustLevel = async (agentId, trustLevel) => {
-    try {
-      await apiClient.post('/governance/trust-levels', {
-        agentId,
-        trustLevel
-      });
-      triggerAction(`Trust level for ${agentId} updated.`);
-      fetchGovernanceData();
-    } catch (err) {
-      console.error('Failed to update trust level:', err);
-      triggerAction('Failed to update trust level.');
-    }
-  };
-
-  const handleUpdateAgentStatus = async (agentId, isCurrentlyActive) => {
-    try {
-      await apiClient.post('/governance/agent-status', {
-        agentId,
-        isActive: !isCurrentlyActive
-      });
-      triggerAction(`Agent ${agentId} status updated successfully.`);
-      fetchGovernanceData();
-    } catch (err) {
-      console.error('Failed to update agent status:', err);
-      triggerAction('Failed to update agent status.');
-    }
-  };
-
-  const handleUpdateApproval = async (requestId, status, notes = '') => {
-    try {
-      await apiClient.post('/governance/approvals/status', {
-        requestId,
-        status,
-        reviewerId: user.id,
-        notes
-      });
-      triggerAction(`Action ${status === 'approved' ? 'authorized' : 'denied'} successfully.`);
-      fetchGovernanceData();
-    } catch (err) {
-      console.error('Failed to update approval status:', err);
-      triggerAction('Failed to process governance decision.');
-    }
-  };
 
   useEffect(() => {
     fetchEscalations();
     if (activeSubTab === 'team') fetchSpecialists();
-    if (activeSubTab === 'logs') fetchAuditLogs();
-    if (activeSubTab === 'health') fetchHealthData();
-    if (activeSubTab === 'governance') fetchGovernanceData();
     
     const interval = setInterval(() => {
       fetchEscalations();
       if (activeSubTab === 'team') fetchSpecialists();
-      if (activeSubTab === 'logs') fetchAuditLogs();
-      if (activeSubTab === 'health') fetchHealthData();
-      if (activeSubTab === 'governance') fetchGovernanceData();
     }, 10000);
     return () => clearInterval(interval);
   }, [activeSubTab]);
@@ -406,12 +194,6 @@ const AdminManagementDashboard = () => {
                 onClick={() => setActiveSubTab('ops')} 
               />
               <NavItem 
-                icon={Target} 
-                label="CS Command Center" 
-                active={activeSubTab === 'cs'} 
-                onClick={() => setActiveSubTab('cs')} 
-              />
-              <NavItem 
                 icon={ArrowLeft} 
                 label="Live Dashboard" 
                 onClick={() => navigate('/dashboard')} 
@@ -422,24 +204,8 @@ const AdminManagementDashboard = () => {
                 active={activeSubTab === 'team'} 
                 onClick={() => setActiveSubTab('team')} 
               />
-              <NavItem 
-                icon={Activity} 
-                label="System Health" 
-                active={activeSubTab === 'health'} 
-                onClick={() => setActiveSubTab('health')} 
-              />
-              <NavItem 
-                icon={Shield} 
-                label="Security Logs" 
-                active={activeSubTab === 'logs'} 
-                onClick={() => setActiveSubTab('logs')} 
-              />
-              <NavItem 
-                icon={Gavel} 
-                label="Governance Engine" 
-                active={activeSubTab === 'governance'} 
-                onClick={() => setActiveSubTab('governance')} 
-              />
+
+
               <NavItem 
                 icon={Settings} 
                 label="Admin Settings" 
@@ -517,18 +283,14 @@ const AdminManagementDashboard = () => {
           <div>
             <h1 className="text-2xl font-bold text-white font-display tracking-tight">
               {activeSubTab === 'ops' ? 'Escalation Management' : 
-               activeSubTab === 'cs' ? 'CS Command Center' :
                activeSubTab === 'team' ? 'Team Control' :
                activeSubTab === 'health' ? 'System Telemetry' : 
-               activeSubTab === 'governance' ? 'Governance Oversight' :
                activeSubTab === 'settings' ? 'Global Settings' : 'Security Audit'}
             </h1>
             <p className="text-[10px] text-white/40 mt-1 uppercase tracking-[0.15em] font-display font-medium">
               {activeSubTab === 'ops' ? 'Manual Intervention Pipeline' : 
-               activeSubTab === 'cs' ? 'At-Risk Accounts & Proactive Intervention' :
                activeSubTab === 'team' ? 'Specialist Roster & Performance' :
                activeSubTab === 'health' ? 'Real-time Infrastructure Monitoring' : 
-               activeSubTab === 'governance' ? 'AI Agent Permissions & Authorization' :
                activeSubTab === 'settings' ? 'Environment Configuration & Rules' : 'Immutable Access Logs'}
             </p>
           </div>
@@ -721,20 +483,7 @@ const AdminManagementDashboard = () => {
               </>
             )}
 
-            {activeSubTab === 'cs' && (
-              <CustomerSuccessView 
-                csCustomers={csCustomers}
-                setCsCustomers={setCsCustomers}
-                selectedCsIds={selectedCsIds}
-                setSelectedCsIds={setSelectedCsIds}
-                csSearchQuery={csSearchQuery}
-                setCsSearchQuery={setCsSearchQuery}
-                csPriorityFilter={csPriorityFilter}
-                setCsPriorityFilter={setCsPriorityFilter}
-                csStatusFilter={csStatusFilter}
-                setCsStatusFilter={setCsStatusFilter}
-              />
-            )}
+
 
             {activeSubTab === 'team' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -797,146 +546,8 @@ const AdminManagementDashboard = () => {
               </div>
             )}
 
-            {activeSubTab === 'health' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-4 gap-6">
-                  <div className="bg-[#0a110b] border border-[#1a281e] p-6 rounded-3xl">
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-4">Pipeline Latency</div>
-                    <div className="text-3xl font-bold text-[#c5f82a] font-mono">{healthData?.latency || '1.2s'}</div>
-                    <div className="mt-4 h-1.5 w-full bg-[#1a281e] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#c5f82a] w-[20%]" />
-                    </div>
-                  </div>
-                  <div className="bg-[#0a110b] border border-[#1a281e] p-6 rounded-3xl">
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-4">Active Connections</div>
-                    <div className="text-3xl font-bold text-white font-mono">{healthData?.active_connections || '12'}</div>
-                    <div className="mt-4 h-1.5 w-full bg-[#1a281e] rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 w-[45%]" />
-                    </div>
-                  </div>
-                  <div className="bg-[#0a110b] border border-[#1a281e] p-6 rounded-3xl">
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-4">API QPS</div>
-                    <div className="text-3xl font-bold text-white font-mono">{healthData?.qps || '850/m'}</div>
-                    <div className="mt-4 h-1.5 w-full bg-[#1a281e] rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-500 w-[40%]" />
-                    </div>
-                  </div>
-                  <div className="bg-[#0a110b] border border-[#1a281e] p-6 rounded-3xl">
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-4">System Errors</div>
-                    <div className={`text-3xl font-bold font-mono ${healthData?.error_rate > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {healthData?.error_rate || '0'}
-                    </div>
-                    <div className="mt-4 h-1.5 w-full bg-[#1a281e] rounded-full overflow-hidden">
-                      <div className={`h-full ${healthData?.error_rate > 0 ? 'bg-red-500' : 'bg-green-500'} w-[5%]`} />
-                    </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="bg-[#0a110b] border border-[#1a281e] p-8 rounded-3xl">
-                    <h3 className="text-lg font-bold text-white mb-6">Service Availability</h3>
-                    <div className="space-y-4">
-                      {[
-                        { name: 'Inference Engine', status: 'Operational', ping: '12ms' },
-                        { name: 'Graphify Core', status: 'Operational', ping: '8ms' },
-                        { name: 'Postgres Cluster', status: 'Operational', ping: '4ms' },
-                        { name: 'Real-time Gateway', status: 'Operational', ping: '15ms' },
-                        { name: 'Analytics Worker', status: 'Warning', ping: '450ms' }
-                      ].map((service, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-[#060c08] border border-[#1a281e] rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${service.status === 'Operational' ? 'bg-[#c5f82a]' : 'bg-red-500 animate-pulse'}`} />
-                            <span className="text-sm font-bold text-gray-200">{service.name}</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">{service.ping}</span>
-                            <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${service.status === 'Operational' ? 'bg-[#c5f82a]/10 text-[#c5f82a] border-[#c5f82a]/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                              {service.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-[#0a110b] border border-[#1a281e] p-8 rounded-3xl">
-                    <h3 className="text-lg font-bold text-white mb-6">Resource Allocation</h3>
-                    <div className="flex items-center justify-center h-64 border border-[#1a281e] border-dashed rounded-2xl bg-[#09110b]">
-                      <div className="text-center">
-                        <Activity className="text-[#c5f82a] mb-3 mx-auto" size={32} />
-                        <div className="text-xs text-gray-500 uppercase tracking-widest">Telemetry Stream Active</div>
-                        <div className="text-[10px] text-gray-600 mt-1 uppercase tracking-widest">Visualizing 24 Cluster Nodes</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {activeSubTab === 'logs' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-[#0a110b] border border-[#1a281e] rounded-3xl overflow-hidden">
-                  <div className="p-8 border-b border-[#1a281e] flex justify-between items-center">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Security Audit Log</h3>
-                      <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Immutable records of administrative actions</p>
-                    </div>
-                    <button 
-                      onClick={() => triggerAction('Filtering criteria applied.')}
-                      className="p-3 bg-[#1a281e] text-gray-400 rounded-xl hover:text-white transition-colors border border-[#2a4230]"
-                    >
-                      <Filter size={18} />
-                    </button>
-                  </div>
-                  <div className="p-0">
-                    <table className="w-full text-left">
-                      <thead className="bg-[#060c08] border-b border-[#1a281e]">
-                        <tr>
-                          <th className="p-6 text-[10px] text-gray-600 font-bold uppercase tracking-widest">Timestamp</th>
-                          <th className="p-6 text-[10px] text-gray-600 font-bold uppercase tracking-widest">Subject</th>
-                          <th className="p-6 text-[10px] text-gray-600 font-bold uppercase tracking-widest">Action</th>
-                          <th className="p-6 text-[10px] text-gray-600 font-bold uppercase tracking-widest">Object</th>
-                          <th className="p-6 text-[10px] text-gray-600 font-bold uppercase tracking-widest">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#1a281e]">
-                        {(auditLogs.length > 0 ? auditLogs : [
-                          { timestamp: '2026-05-01 06:45:12', user_id: 'admin_root', action: 'CASE_CLAIM', target: 'user_9921', status: 'SUCCESS' },
-                          { timestamp: '2026-05-01 06:42:05', user_id: 'admin_root', action: 'LOGIN_AUTH', target: 'IP_192.168.1.1', status: 'SUCCESS' }
-                        ]).map((log, i) => (
-                          <tr key={i} className="hover:bg-white/5 transition-colors group">
-                            <td className="p-6 text-xs text-gray-500 font-mono">{log.timestamp}</td>
-                            <td className="p-6 text-xs font-bold text-gray-300">{log.user_id}</td>
-                            <td className="p-6 text-xs"><span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] font-bold text-gray-400">{log.action}</span></td>
-                            <td className="p-6 text-xs text-gray-500 font-mono">{log.target || 'N/A'}</td>
-                            <td className="p-6">
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${log.status === 'SUCCESS' || log.result === 'success' ? 'bg-[#c5f82a]/10 text-[#c5f82a] border-[#c5f82a]/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-                                {log.status || log.result}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-            {activeSubTab === 'governance' && (
-              <GovernanceView 
-                view={govView}
-                setView={setGovView}
-                approvals={approvalRequests}
-                logs={governanceLogs}
-                policies={governancePolicies}
-                agentScopes={agentScopes}
-                trustLevels={agentTrustLevels}
-                isLoading={isGovLoading}
-                onAction={handleUpdateApproval}
-                onUpdateTrust={handleUpdateTrustLevel}
-                onUpdateStatus={handleUpdateAgentStatus}
-              />
-            )}
 
             {activeSubTab === 'settings' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
