@@ -1,4 +1,4 @@
-const validationSchemas = require('../../../shared/validationSchemas');
+const validationSchemas = require('./validationSchemas');
 
 const validate = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body, { abortEarly: false, allowUnknown: true });

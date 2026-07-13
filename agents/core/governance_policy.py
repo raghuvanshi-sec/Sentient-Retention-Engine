@@ -1,8 +1,7 @@
 import os
 import json
 
-# Define the path to the central, language-agnostic policy file
-POLICY_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "governance", "policies.json"))
+
 
 # Core Governance Policies (Hardcoded Fail-safes) - Fallbacks
 HARDCODED_POLICIES = {
@@ -92,16 +91,3 @@ ACTION_SENSITIVITY = {
     "SERVICE_TERMINATION": 1.0
 }
 
-# Attempt to dynamically load policies from central JSON
-try:
-    if os.path.exists(POLICY_FILE):
-        with open(POLICY_FILE, "r") as f:
-            policies_data = json.load(f)
-            HARDCODED_POLICIES = policies_data.get("HARDCODED_POLICIES", HARDCODED_POLICIES)
-            IMPACT_THRESHOLDS = policies_data.get("IMPACT_THRESHOLDS", IMPACT_THRESHOLDS)
-            RISK_TIERS = policies_data.get("RISK_TIERS", RISK_TIERS)
-            AGENT_TRUST_LEVELS = policies_data.get("AGENT_TRUST_LEVELS", AGENT_TRUST_LEVELS)
-            ACTION_SENSITIVITY = policies_data.get("ACTION_SENSITIVITY", ACTION_SENSITIVITY)
-except Exception as e:
-    # Fail-safe: log the exception but continue with static fallbacks
-    print(f"[GovernanceEngine] Warning loading dynamic policies: {e}. Using static default rules.")

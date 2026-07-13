@@ -1,9 +1,0 @@
-{
-  "name": "sentient-retention-shared",
-  "version": "0.1.0",
-  "private": true,
-  "main": "validationSchemas.js",
-  "dependencies": {
-    "joi": "^18.1.2"
-  }
-}

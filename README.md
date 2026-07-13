@@ -75,7 +75,6 @@ cd Sentient-Retention-Engine
 # 2. Install dependencies for all Node.js workspaces
 npm install --prefix backend
 npm install --prefix frontend
-npm install --prefix shared
 
 # 3. Setup Python Virtual Environments
 cd agents
@@ -128,14 +127,8 @@ flowchart LR
     Root --> Frontend["📂 frontend/ (React 18 Dashboard)"]:::dir
     Frontend --> FrSrc["📂 src/ (Components & Pages)"]:::dir
     
-    Root --> Gov["📂 governance/ (Cross-platform Policies)"]:::dir
-    
     Root --> Infra["📂 infra/ (Docker PostgreSQL Setup)"]:::dir
     Infra --> InfDb["📂 database/ (PostgreSQL Schemas)"]:::dir
-    
-    Root --> Obs["📂 observability/ (Telemetry Tools)"]:::dir
-    Root --> Sec["📂 security/ (RBAC Rules)"]:::dir
-    Root --> Shared["📂 shared/ (Common Schemas)"]:::dir
     
     Root --> Sim["📂 simulation/"]:::dir
     Sim --> SimML["📂 ml-service/ (scikit-learn Predictor)"]:::dir
